@@ -11,29 +11,22 @@ app = FastAPI(title="Smart Task Organizer")
 # CORS для production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://smart-task-organizer.vercel.app",
-        "https://smart-task-organizer-*.vercel.app"
-    ],
+    allow_origins=["*"],  # На время разработки
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 class Priority(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
-
 class Task(BaseModel):
     title: str
     description: str = ""
     deadline: date
     category: str = "general"
-
 
 def init_db():
     conn = sqlite3.connect('tasks.db')
@@ -52,7 +45,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-
 def predict_priority(task: Task) -> Priority:
     days_until_deadline = (task.deadline - date.today()).days
 
@@ -63,11 +55,13 @@ def predict_priority(task: Task) -> Priority:
     else:
         return Priority.LOW
 
+@app.get("/")
+def read_root():
+    return {"message": "Smart Task Organizer API is working!"}
 
 @app.options("/tasks/")
 async def options_tasks():
     return JSONResponse(content={"message": "OK"})
-
 
 @app.post("/tasks/")
 def create_task(task: Task):
@@ -86,7 +80,6 @@ def create_task(task: Task):
     conn.close()
 
     return {"id": task_id, "priority": priority, "message": "Task created successfully"}
-
 
 @app.get("/tasks/")
 def get_tasks():
@@ -111,7 +104,6 @@ def get_tasks():
             for task in tasks
         ]
     }
-
 
 @app.get("/recommendations/")
 def get_recommendations():
@@ -139,10 +131,9 @@ def get_recommendations():
         ]
     }
 
-
+# Инициализация БД при старте
 init_db()
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
